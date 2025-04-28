@@ -7,7 +7,7 @@ import os
 
 def uploud(i):
     global files, image
-    image = cv2.imread(r'{}\{}'.format(path_pliki, files[i-ord('0')]))
+    image = cv2.imread(os.path.join('C:/Users/dawid/Desktop/WMA3/photos', path_pliki, files[i-ord('0')]))
     norm_size()
 
 # key -
@@ -333,10 +333,13 @@ def change_h(x):
     if fun is not None:
         fun()
 
+def my_fun():
+    pass
+
 image = None
 fun = None
 files = None
-path_pliki = r'C:\Users\trape\GitHub\WMA_PL_dzienne_macmac\cw5\pliki'
+path_pliki = r'C:\Users\dawid\Desktop\WMA3\photos'
 
 def main():
     global image, fun, files
