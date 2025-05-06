@@ -339,7 +339,7 @@ def my_fun():
 image = None
 fun = None
 files = None
-path_pliki = r'C:\Users\dawid\Desktop\WMA3\photos'
+path_pliki = r'C:\Users\dawid\Desktop\SIFTIMAGEDETECTIONWMA3\photos'
 
 def main():
     global image, fun, files
