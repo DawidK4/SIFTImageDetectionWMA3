@@ -7,7 +7,7 @@ import os
 
 def uploud(i):
     global files, image
-    image = cv2.imread(os.path.join('C:/Users/dawid/Desktop/WMA3/photos', path_pliki, files[i-ord('0')]))
+    image = cv2.imread(r'{}\{}'.format(path_pliki, files[i-ord('0')]))
     norm_size()
 
 # key -
@@ -333,13 +333,10 @@ def change_h(x):
     if fun is not None:
         fun()
 
-def my_fun():
-    pass
-
 image = None
 fun = None
 files = None
-path_pliki = r'C:\Users\dawid\Desktop\SIFTIMAGEDETECTIONWMA3\photos'
+path_pliki = r'C:\\Users\\dawid\\Desktop\\SIFTImageDetectionWMA3\\photos'
 
 def main():
     global image, fun, files
