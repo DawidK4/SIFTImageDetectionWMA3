@@ -26,6 +26,26 @@ def create_mask(img):
 
 # --- Funkcja ekstrakcji cech (SIFT lub ORB) ---
 def extract_features(detector):
+    """
+    Extracts keypoints and descriptors from reference images using the given detector.
+
+    Args:
+        detector: A feature detector object (e.g., SIFT or ORB) with a detectAndCompute method.
+
+    Returns:
+        tuple: Three lists:
+            - imgs: Loaded images (BGR format).
+            - kps: Detected keypoints for each image.
+            - dess: Descriptors for each image.
+
+    The function processes images named 'key1.jpg' to 'key4.jpg' in the 'photos' directory.
+    For each image:
+        - Loads the image.
+        - Converts it to grayscale.
+        - Detects keypoints and computes descriptors.
+        - Appends the results to the respective lists.
+    If an image cannot be loaded, it prints an error and skips it.
+    """
     imgs = []
     kps = []
     dess = []
