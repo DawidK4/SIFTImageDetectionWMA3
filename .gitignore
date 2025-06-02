@@ -1,3 +1,9 @@
+# My data
+masks_orb
+masks_sift
+output_orb
+output_sift
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

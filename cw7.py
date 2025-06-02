@@ -336,7 +336,7 @@ def change_h(x):
 image = None
 fun = None
 files = None
-path_pliki = r'C:\\Users\\dawid\\Desktop\\SIFTImageDetectionWMA3\\photos'
+path_pliki = r'photos'
 
 def main():
     global image, fun, files

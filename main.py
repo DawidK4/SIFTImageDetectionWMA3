@@ -1,132 +1,145 @@
 import cv2
-import numpy as np
-import glob
 import os
 
-# zad 2
+# Ścieżki i tworzenie folderów
+photos_path = 'photos'
+video_path = 'video.mp4'
 
-key_images_path = "photos/"
+folders = {
+    'sift_masks': 'masks_sift',
+    'orb_masks': 'masks_orb',
+    'sift_output': 'output_sift',
+    'orb_output': 'output_orb'
+}
+for folder in folders.values():
+    os.makedirs(folder, exist_ok=True)
 
-key_images = [] # List to store images, keypoints, and descriptors
-key_descriptors = [] # List to store descriptors for later use
-sift = cv2.SIFT_create() # Initialize SIFT Detector
+# --- Funkcja do tworzenia maski (używana dla obu metod) ---
+def create_mask(img):
+    hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
+    lower = (0, 20, 50)
+    upper = (180, 255, 255)
+    mask = cv2.inRange(hsv, lower, upper)
+    kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5, 5))
+    mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, kernel)
+    return mask
 
-for file in sorted(glob.glob(os.path.join(key_images_path, "*.jpg"))):
-    image = cv2.imread(file, cv2.IMREAD_GRAYSCALE) # Read image in grayscale
-    mask = np.ones_like(image, dtype=np.uint8) * 255 # Create a mask for the image
+# --- Funkcja ekstrakcji cech (SIFT lub ORB) ---
+def extract_features(detector):
+    imgs = []
+    kps = []
+    dess = []
 
-    keypoints, descriptors = sift.detectAndCompute(image, mask) # Detect keypoints and compute descriptors
-    key_images.append((image, keypoints, descriptors, file))   # Store image, keypoints, descriptors, and filename 
-    key_descriptors.append(descriptors) # Store descriptors for later use
-
-    img_with_keypoints = cv2.drawKeypoints(image, keypoints, None) # Draw keypoints on the image
-    cv2.imshow(f"Keypoints {file}", img_with_keypoints)
-    cv2.waitKey(500)
-
-cv2.destroyAllWindows()
-
-# zad 3
-
-video = cv2.VideoCapture("video.mp4") # Open video file
-bf = cv2.BFMatcher() # Initialize Brute Force Matcher
-
-frame_count = 0 
-match_counts = {img[3]: 0 for img in key_images} # Dictionary to count matches for each key image
-
-while video.isOpened():
-    ret, frame = video.read() 
-    if not ret:
-        break
-
-    gray_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-    kp_frame, des_frame = sift.detectAndCompute(gray_frame, None) # Detect keypoints and compute descriptors for the current frame
-
-    best_match_img = None 
-    max_matches = 0
-    best_matches = None
-
-    for img, kp, des, filename in key_images:
-        if des is None or des_frame is None:
+    for i in range(1, 5):
+        img_path = os.path.join(photos_path, f'key{i}.jpg')
+        img = cv2.imread(img_path)
+        if img is None:
+            print(f"[ERROR] Nie można wczytać: {img_path}")
             continue
-        matches = bf.knnMatch(des, des_frame, k=2) # Find the two best matches for each descriptor
 
-        good_matches = [] 
-        for m, n in matches:
-            if m.distance < 0.75 * n.distance:
-                good_matches.append(m)
+        gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+        kp, des = detector.detectAndCompute(gray, None)
+        imgs.append(img)
+        kps.append(kp)
+        dess.append(des)
+    return imgs, kps, dess
 
-        if len(good_matches) > max_matches:
-            max_matches = len(good_matches)
-            best_match_img = img
-            best_matches = good_matches
-            best_filename = filename
-
-    if best_match_img is not None:
-        match_counts[best_filename] += 1
-        img_matches = cv2.drawMatches(best_match_img, key_images[0][1], frame, kp_frame, best_matches, None)
-        cv2.imshow("Matching", img_matches)
-        cv2.waitKey(1)
-
-    frame_count += 1
-
-video.release()
-cv2.destroyAllWindows()
-
-print("Statystyki dopasowań:")
-for filename, count in match_counts.items():
-    print(f"{filename}: {count} dopasowań")
-
-# zad 4
-
-orb = cv2.ORB_create() # Initialize ORB Detector
-key_images_orb = []
-
-for file in sorted(glob.glob(os.path.join(key_images_path, "*.jpg"))):
-    image = cv2.imread(file, cv2.IMREAD_GRAYSCALE)
-    mask = np.ones_like(image, dtype=np.uint8) * 255 # Create a mask for the image
-
-    kp, des = orb.detectAndCompute(image, mask) # Detect keypoints and compute descriptors using ORB
-    key_images_orb.append((image, kp, des, file)) # Store image, keypoints, descriptors, and filename
-
-video = cv2.VideoCapture("video.mp4")
-bf = cv2.BFMatcher(cv2.NORM_HAMMING, crossCheck=True)
-
-match_counts_orb = {img[3]: 0 for img in key_images_orb}
-
-while video.isOpened():
-    ret, frame = video.read()
-    if not ret:
-        break
-
-    gray_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-    kp_frame, des_frame = orb.detectAndCompute(gray_frame, None)
-
-    best_match_img = None
-    max_matches = 0
-    best_matches = None
-
-    for img, kp, des, filename in key_images_orb:
-        if des is None or des_frame is None:
+# --- Funkcja zapisu masek ---
+def save_masks(mask_folder):
+    for i in range(1, 5):
+        img_path = os.path.join(photos_path, f'key{i}.jpg')
+        img = cv2.imread(img_path)
+        if img is None:
             continue
-        matches = bf.match(des, des_frame)
+        mask = create_mask(img)
+        cv2.imwrite(os.path.join(mask_folder, f'mask{i}.png'), mask)
 
-        matches = sorted(matches, key=lambda x: x.distance)
+# --- Funkcja dopasowania i zapisu wyników ---
+def match_and_save(detector_name, detector, norm_type, mask_folder, output_folder):
+    print(f"\n--- Przetwarzanie metodą {detector_name} ---")
 
-        if len(matches) > max_matches:
-            max_matches = len(matches)
-            best_match_img = img
-            best_matches = matches
-            best_filename = filename
+    key_imgs, key_kps, key_dess = extract_features(detector)
+    save_masks(mask_folder)
 
-    if best_match_img is not None:
-        match_counts_orb[best_filename] += 1
-        img_matches = cv2.drawMatches(best_match_img, key_images_orb[0][1], frame, kp_frame, best_matches[:10], None)
-        cv2.imshow("Matching ORB", img_matches)
-        cv2.waitKey(1)
+    cap = cv2.VideoCapture(video_path)
+    if not cap.isOpened():
+        print(f"[ERROR] Nie można otworzyć pliku wideo: {video_path}")
+        return
 
-video.release()
-cv2.destroyAllWindows()
+    bf = cv2.BFMatcher(norm_type, crossCheck=(detector_name=='ORB'))
 
-print("Statystyki dopasowań (ORB):")
-for filename, count in match_counts_orb.items():
-    print(f"{filename}: {count} dopasowań")
+    frame_count = 0
+    match_stats = [0] * len(key_dess)
+
+    while True:
+        ret, frame = cap.read()
+        if not ret:
+            break
+
+        gray_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+        frame_kp, frame_des = detector.detectAndCompute(gray_frame, None)
+
+        best_idx = -1
+        max_matches = 0
+        best_matches = []
+
+        for idx, des in enumerate(key_dess):
+            if des is None or frame_des is None:
+                continue
+            if detector_name == 'SIFT':
+                matches = bf.knnMatch(des, frame_des, k=2)
+                # Lowe's ratio test
+                good = [m for m, n in matches if m.distance < 0.75 * n.distance]
+            else:  # ORB
+                matches = bf.match(des, frame_des)
+                good = sorted(matches, key=lambda x: x.distance)
+
+            if len(good) > max_matches:
+                best_idx = idx
+                max_matches = len(good)
+                best_matches = good
+
+        if best_idx != -1:
+            match_stats[best_idx] += 1
+            # Rysowanie dopasowań (maks 10)
+            result = cv2.drawMatches(
+                key_imgs[best_idx],
+                key_kps[best_idx],
+                frame,
+                frame_kp,
+                best_matches[:10],
+                None,
+                flags=cv2.DrawMatchesFlags_NOT_DRAW_SINGLE_POINTS
+            )
+            out_frame_path = os.path.join(output_folder, f'frame_{frame_count:04d}.jpg')
+            cv2.imwrite(out_frame_path, result)
+
+        frame_count += 1
+
+    cap.release()
+
+    print(f"\nStatystyki dopasowania dla {detector_name}:")
+    for i, count in enumerate(match_stats):
+        print(f" key{i+1}.jpg: {count} klatek")
+
+# --- Uruchomienie dla SIFT i ORB ---
+
+# SIFT
+sift_detector = cv2.SIFT_create()
+match_and_save(
+    detector_name='SIFT',
+    detector=sift_detector,
+    norm_type=cv2.NORM_L2,
+    mask_folder=folders['sift_masks'],
+    output_folder=folders['sift_output']
+)
+
+# ORB
+orb_detector = cv2.ORB_create(nfeatures=1000)
+match_and_save(
+    detector_name='ORB',
+    detector=orb_detector,
+    norm_type=cv2.NORM_HAMMING,
+    mask_folder=folders['orb_masks'],
+    output_folder=folders['orb_output']
+)
